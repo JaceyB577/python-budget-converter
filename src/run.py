@@ -129,11 +129,16 @@ def process_lloyds(csv_lines: list[list[str]]) -> list[Transaction]:
 
     headers = csv_lines.pop()
 
-    for row in csv_lines:
-        credit = float(row[3]) if row[3] else 0
-        debit = float(row[4]) if row[4] else 0
+    date_idx = headers.index('Transaction Date')
+    desc_idx = headers.index('Transaction Description')
+    credit_idx = headers.index('Credit Amount')
+    debit_idx = headers.index('Debit Amount')
 
-        transactions.extend(create_transaction(row[0], debit - credit, row[1]))
+    for row in csv_lines:
+        credit = float(row[credit_idx]) if row[credit_idx] else 0
+        debit = float(row[debit_idx]) if row[debit_idx] else 0
+
+        transactions.extend(create_transaction(row[date_idx], debit - credit, row[desc_idx]))
 
     return transactions
 
