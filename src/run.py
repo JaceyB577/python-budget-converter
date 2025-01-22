@@ -31,7 +31,13 @@ CATEGORIES = {
     "Charity": [],
     "Clothing": [],
     "Days Out": [],
-    "Dining Out": ["Toby Carvery", "WELCOME BREAK"],
+    "Dining Out": ["Connectvendingltd",
+                   "Just Eat",
+                   "Starbucks",
+                   "Thebreakfastclub",
+                   "Toby Carvery",
+                   "WELCOME BREAK",
+                   "Wetherspoon", ],
     "Fun": ["Google Play Apps"],
     "Gift": [],
     "Holiday": [],
@@ -47,7 +53,7 @@ CATEGORIES = {
     "Retirement Account": [],
     "Stock Portfolio": [],
     "Sinking Fund Down Payment": [],
-    "Sinking Fund Rest": [],
+    "Sinking Fund Rest": ["1p Saving Challenge Pot", "Rainy day Pot"],
     "Credit Cards": ["National Westminster", "NW MASTERCARD", "SANTANDERCARDS LTD", "B/CARD PLAT VISA"],
     "Decorating": ["DECORATING FUND"],
     "Transfer": [],
@@ -74,12 +80,15 @@ def detect_category(description):
 
 
 class Transaction:
-    def __init__(self, date, amount, description):
+    def __init__(self, date: str, amount: float, description: str, category: str = None):
         self.date = date
         self.amount = amount
         self.description = description
 
-        self.category = detect_category(self.description)
+        if category is not None:
+            self.category = category
+        else:
+            self.category = detect_category(self.description)
 
         if self.category in INCOME:
             self.amount = -self.amount
@@ -94,18 +103,16 @@ class Transaction:
 def parse_csv(csv_filename: str) -> list[list[str]]:
     lines = []
 
-    with open(csv_filename, "r") as csv_file:
+    with open(csv_filename, "r", encoding="utf8") as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
 
         for row in csv_reader:
             lines.append(row)
 
-    lines.reverse()
-
     return lines
 
 
-def create_transaction(date: str, amount: int, description: str) -> list[Transaction]:
+def create_transaction(date: str, amount: float, description: str, category: str = None) -> list[Transaction]:
     transactions = []
 
     if get_fuzzy_score(description, "Rent") > 90:
@@ -119,7 +126,7 @@ def create_transaction(date: str, amount: int, description: str) -> list[Transac
         transactions.append(Transaction(date, groceries, "Groceries"))
         transactions.append(Transaction(date, transportation, "Transportation"))
     else:
-        transactions.append(Transaction(date, amount, description))
+        transactions.append(Transaction(date, amount, description, category))
 
     return transactions
 
@@ -127,19 +134,58 @@ def create_transaction(date: str, amount: int, description: str) -> list[Transac
 def process_lloyds(csv_lines: list[list[str]]) -> list[Transaction]:
     transactions = []
 
-    headers = csv_lines.pop()
+    headers = csv_lines.pop(0)
+
+    csv_lines.reverse()
+
+    date_idx = headers.index('Transaction Date')
+    desc_idx = headers.index('Transaction Description')
+    credit_idx = headers.index('Credit Amount')
+    debit_idx = headers.index('Debit Amount')
 
     for row in csv_lines:
-        credit = float(row[3]) if row[3] else 0
-        debit = float(row[4]) if row[4] else 0
+        credit = float(row[credit_idx]) if row[credit_idx] else 0
+        debit = float(row[debit_idx]) if row[debit_idx] else 0
 
-        transactions.extend(create_transaction(row[0], debit - credit, row[1]))
+        transactions.extend(create_transaction(row[date_idx], debit - credit, row[desc_idx]))
 
     return transactions
 
 
 def process_natwest(csv_lines: list[list[str]]) -> list[Transaction]:
     pass
+
+
+def process_monzo(csv_lines: list[list[str]]) -> list[Transaction]:
+    transactions: list[Transaction] = []
+
+    headers = csv_lines.pop(0)
+
+    date_idx = headers.index('Date')
+    desc_idx = headers.index('Name')
+    category_idx = headers.index('Category')
+    amount_idx = headers.index('Amount')
+
+    for row in csv_lines:
+        date = row[date_idx]
+        amount = float(row[amount_idx]) if row[amount_idx] else 0
+        desc = row[desc_idx]
+
+        match row[category_idx]:
+            case "Entertainment":
+                category = "Days Out"
+            case "Groceries":
+                category = "Groceries"
+            case "Transfers":
+                category = "Transfer"
+            case "Transport":
+                category = "Parking" if "park" in desc.lower() else "Transportation"
+            case _:
+                category = detect_category(desc)
+
+        transactions.extend(create_transaction(date, -amount, desc, category))
+
+    return transactions
 
 
 def clean_up_transactions(transactions: list[Transaction]) -> list[Transaction]:
@@ -157,7 +203,7 @@ def clean_up_transactions(transactions: list[Transaction]) -> list[Transaction]:
 
 
 def export_to_csv(bank: str, transactions: list[Transaction]):
-    file = "export.csv"
+    file = f"output/{bank}_export.csv"
 
     with open(file, "w", newline='', encoding='utf-8') as csv_file:
         csv_writer = csv.writer(csv_file, delimiter=',')
@@ -176,21 +222,27 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-f", "--file")
-    parser.add_argument("-b", "--bank", choices=["Lloyds"])
+    parser.add_argument("-b", "--bank", choices=["Lloyds", "Monzo"])
     parser.add_argument("-q", "--quiet", action="store_true")
 
     args = parser.parse_args()
 
-    lines = parse_csv(args.file)
+    csv_lines = parse_csv(args.file)
 
     match args.bank:
         case "Lloyds":
-            transactions = process_lloyds(lines)
+            transactions = process_lloyds(csv_lines)
         case "Natwest 7051" | "Natwest":
-            transactions = process_natwest(lines)
+            transactions = process_natwest(csv_lines)
+        case "Monzo":
+            transactions = process_monzo(csv_lines)
         case _:
             print(f"Unable to locate Bank: {args.bank}")
             sys.exit(1)
+
+    if not transactions:
+        print(f"No transactions generated for file: {args.file}")
+        sys.exit(0)
 
     transactions = clean_up_transactions(transactions)
 
