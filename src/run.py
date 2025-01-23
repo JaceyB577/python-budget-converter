@@ -4,74 +4,23 @@ import sys
 
 from fuzzywuzzy import fuzz
 
+from config import CATEGORIES, BILLS_CATEGORIES
 from transaction import Transaction
-
-INCOME = [
-    "Employment (Net)",
-    "Friend",
-    "Interest",
-    "Twitch Payout",
-    "Lottery Winnings",
-    "Birthday"]
-
-CATEGORIES = {
-    # Income
-    "Employment (Net)": ["SSTL"],
-    "Friend": [],
-    "Interest": ["INTEREST"],
-    "Twitch Payout": [],
-    "Lottery Winnings": [],
-    "Birthday": [],
-    # True Expenses
-    "Housing": ["Rent"],
-    "Utilities": ["Utilities"],
-    "Groceries": ["Groceries", "TESCO STORES"],
-    "Transportation": ["Transportation"],
-    "Fees": ["CLUB LLOYDS FEE", "CLUB LLOYDS WAIVED"],
-    # Expenses
-    "Body": ["SURREY SPORTS PARK", "PureGym"],
-    "Charity": [],
-    "Clothing": [],
-    "Days Out": [],
-    "Dining Out": ["Connectvendingltd",
-                   "Just Eat",
-                   "Starbucks",
-                   "Thebreakfastclub",
-                   "Toby Carvery",
-                   "WELCOME BREAK",
-                   "Wetherspoon", ],
-    "Fun": ["Google Play Apps"],
-    "Gift": [],
-    "Holiday": [],
-    "Lottery": ["NATIONAL LOTTERY"],
-    "Parking": ["RINGGO", "WAVERLEY BOROUGH"],
-    "Stream": ["EPIDEMICSO", "ADOBESYSTE"],
-    "Subscriptions": ["Google YouTubePrem", "LYRA LYRA", "PROPHECY GIRLS POD"],
-    "Therapy": ["Kirsty Stacy"],
-    "Twitch": ["TWITCHINTE", "PATREON"],
-    "Work": [],
-    # Savings
-    "Emergency Fund": [],
-    "Retirement Account": [],
-    "Stock Portfolio": [],
-    "Sinking Fund Down Payment": [],
-    "Sinking Fund Rest": ["1p Saving Challenge Pot", "Rainy day Pot"],
-    "Credit Cards": ["National Westminster", "NW MASTERCARD", "SANTANDERCARDS LTD", "B/CARD PLAT VISA"],
-    "Decorating": ["DECORATING FUND"],
-    "Transfer": [],
-}
 
 
 def get_fuzzy_score(lhs: str, rhs: str) -> int:
     return fuzz.partial_ratio(lhs.lower(), rhs.lower())
 
 
-def detect_category(description):
+def detect_category(description, categories: dict[str, list[str]] = None):
+    if categories is None:
+        categories = CATEGORIES
+        
     max_score = 0
     cat = ''
 
-    for category in CATEGORIES:
-        for desc in CATEGORIES[category]:
+    for category in categories:
+        for desc in categories[category]:
             score = get_fuzzy_score(description, desc)
 
             if score > max_score and score >= 90:
