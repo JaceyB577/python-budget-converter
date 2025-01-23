@@ -15,9 +15,9 @@ def get_fuzzy_score(lhs: str, rhs: str) -> int:
 def detect_category(description, categories: dict[str, list[str]] = None):
     if categories is None:
         categories = CATEGORIES
-        
+
     max_score = 0
-    cat = ''
+    cat = None
 
     for category in categories:
         for desc in categories[category]:
@@ -42,23 +42,11 @@ def parse_csv(csv_filename: str) -> list[list[str]]:
     return lines
 
 
-def create_transaction(date: str, amount: float, description: str, category: str = None) -> list[Transaction]:
-    transactions = []
+def create_transaction(date: str, amount: float, description: str, category: str = None) -> Transaction:
+    if category is None:
+        detect_category(description)
 
-    if get_fuzzy_score(description, "Rent") > 90:
-        rent = 933.28
-        groceries = 155.00
-        transportation = 128.55
-        utilities = amount - rent - groceries - transportation
-
-        transactions.append(Transaction(date, rent, "Rent"))
-        transactions.append(Transaction(date, utilities, "Utilities"))
-        transactions.append(Transaction(date, groceries, "Groceries"))
-        transactions.append(Transaction(date, transportation, "Transportation"))
-    else:
-        transactions.append(Transaction(date, amount, description, category))
-
-    return transactions
+    return Transaction(date, amount, description, category)
 
 
 def process_lloyds(csv_lines: list[list[str]]) -> list[Transaction]:
@@ -74,16 +62,49 @@ def process_lloyds(csv_lines: list[list[str]]) -> list[Transaction]:
     debit_idx = headers.index('Debit Amount')
 
     for row in csv_lines:
+        date = row[date_idx]
+        desc = row[desc_idx]
         credit = float(row[credit_idx]) if row[credit_idx] else 0
         debit = float(row[debit_idx]) if row[debit_idx] else 0
+        amount = debit - credit
 
-        transactions.extend(create_transaction(row[date_idx], debit - credit, row[desc_idx]))
+        if get_fuzzy_score(desc, "Rent") > 90:
+            rent = 933.28
+            groceries = 155.00
+            transportation = 128.55
+            utilities = amount - rent - groceries - transportation
+
+            transactions.append(create_transaction(date, rent, "Rent", "Housing"))
+            transactions.append(create_transaction(date, utilities, "Utilities", "Utilities"))
+            transactions.append(create_transaction(date, groceries, "Groceries", "Groceries"))
+            transactions.append(create_transaction(date, transportation, "Transportation", "Transportation"))
+        else:
+            transactions.append(create_transaction(row[date_idx], debit - credit, row[desc_idx]))
 
     return transactions
 
 
 def process_natwest(csv_lines: list[list[str]]) -> list[Transaction]:
-    pass
+    transactions = []
+
+    headers = csv_lines.pop(0)
+
+    csv_lines.reverse()
+
+    date_idx = headers.index('Date')
+    desc_idx = headers.index('Description')
+    amount_idx = headers.index('Value')
+
+    for row in csv_lines:
+        date = row[date_idx]
+        desc = row[desc_idx]
+        amount = float(row[amount_idx]) if row[amount_idx] else 0
+
+        category = detect_category(desc, BILLS_CATEGORIES)
+
+        transactions.append(create_transaction(date, -amount, desc, category))
+
+    return transactions
 
 
 def process_monzo(csv_lines: list[list[str]]) -> list[Transaction]:
@@ -101,6 +122,8 @@ def process_monzo(csv_lines: list[list[str]]) -> list[Transaction]:
         amount = float(row[amount_idx]) if row[amount_idx] else 0
         desc = row[desc_idx]
 
+        category = None
+
         match row[category_idx]:
             case "Entertainment":
                 category = "Days Out"
@@ -110,10 +133,8 @@ def process_monzo(csv_lines: list[list[str]]) -> list[Transaction]:
                 category = "Transfer"
             case "Transport":
                 category = "Parking" if "park" in desc.lower() else "Transportation"
-            case _:
-                category = detect_category(desc)
 
-        transactions.extend(create_transaction(date, -amount, desc, category))
+        transactions.append(create_transaction(date, -amount, desc, category))
 
     return transactions
 
@@ -152,7 +173,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-f", "--file")
-    parser.add_argument("-b", "--bank", choices=["Lloyds", "Monzo"])
+    parser.add_argument("-b", "--bank", choices=["Lloyds", "Monzo", "Bills"])
     parser.add_argument("-q", "--quiet", action="store_true")
 
     args = parser.parse_args()
@@ -162,7 +183,7 @@ def main():
     match args.bank:
         case "Lloyds":
             transactions = process_lloyds(csv_lines)
-        case "Natwest 7051" | "Natwest":
+        case "Natwest 7051" | "Natwest" | "Bills":
             transactions = process_natwest(csv_lines)
         case "Monzo":
             transactions = process_monzo(csv_lines)
