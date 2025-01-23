@@ -4,6 +4,8 @@ import sys
 
 from fuzzywuzzy import fuzz
 
+from transaction import Transaction
+
 INCOME = [
     "Employment (Net)",
     "Friend",
@@ -77,27 +79,6 @@ def detect_category(description):
                 cat = category
 
     return cat
-
-
-class Transaction:
-    def __init__(self, date: str, amount: float, description: str, category: str = None):
-        self.date = date
-        self.amount = amount
-        self.description = description
-
-        if category is not None:
-            self.category = category
-        else:
-            self.category = detect_category(self.description)
-
-        if self.category in INCOME:
-            self.amount = -self.amount
-
-    def __str__(self):
-        return f'{self.date} {self.category:25s} {self.amount:7.2f} {self.description}'
-
-    def __repr__(self):
-        return self.__str__()
 
 
 def parse_csv(csv_filename: str) -> list[list[str]]:
