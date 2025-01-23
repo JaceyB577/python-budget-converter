@@ -171,5 +171,6 @@ cython_debug/
 .pypirc
 
 # Project Files
+src/config.py
 statements/
 output/
