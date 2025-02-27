@@ -125,6 +125,8 @@ def process_monzo(csv_lines: list[list[str]]) -> list[Transaction]:
         category = None
 
         match row[category_idx]:
+            case "Eating out":
+                category = "Dining Out"
             case "Entertainment":
                 category = "Days Out"
             case "Groceries":
