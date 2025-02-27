@@ -44,7 +44,7 @@ def parse_csv(csv_filename: str) -> list[list[str]]:
 
 def create_transaction(date: str, amount: float, description: str, category: str = None) -> Transaction:
     if category is None:
-        detect_category(description)
+        category = detect_category(description)
 
     return Transaction(date, amount, description, category)
 
