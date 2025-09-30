@@ -33,7 +33,7 @@ def detect_category(description, categories: dict[str, list[str]] = None):
 def parse_csv(csv_filename: str) -> list[list[str]]:
     lines = []
 
-    with open(csv_filename, "r", encoding="utf8") as csv_file:
+    with open(csv_filename, "r", encoding="utf-8") as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
 
         for row in csv_reader:
