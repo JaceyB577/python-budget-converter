@@ -5,6 +5,7 @@ import sys
 from fuzzywuzzy import fuzz
 
 from config import CATEGORIES, BILLS_CATEGORIES
+from config import RENT, GROCERIES, TRANSPORTATION
 from transaction import Transaction
 
 
@@ -72,9 +73,9 @@ def process_lloyds(csv_lines: list[list[str]]) -> list[Transaction]:
         amount = debit - credit
 
         if get_fuzzy_score(desc, "Rent") > 90:
-            rent = 933.28
-            groceries = 151.78
-            transportation = 194.79
+            rent = RENT
+            groceries = GROCERIES
+            transportation = TRANSPORTATION
             utilities = amount - rent - groceries - transportation
 
             transactions.append(create_transaction(date, rent, "Rent", "Housing"))
