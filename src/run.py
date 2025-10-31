@@ -19,6 +19,9 @@ def detect_category(description, categories: dict[str, list[str]] = None):
     max_score = 0
     cat = None
 
+    if "PETROL" in description:
+        return "Petrol"
+
     for category in categories:
         for desc in categories[category]:
             score = get_fuzzy_score(description, desc)
