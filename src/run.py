@@ -202,7 +202,7 @@ def main():
             print(f"Unable to locate Bank: {args.bank}")
             sys.exit(1)
 
-    if not transactions:
+    if not transactions or len(transactions) == 0:
         print(f"No transactions generated for file: {args.file}")
         sys.exit(0)
 
