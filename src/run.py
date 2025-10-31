@@ -125,19 +125,25 @@ def process_monzo(csv_lines: list[list[str]]) -> list[Transaction]:
         amount = float(row[amount_idx]) if row[amount_idx] else 0
         desc = row[desc_idx]
 
-        category = None
+        if amount == 0:
+            continue
 
-        match row[category_idx]:
-            case "Eating out":
-                category = "Dining Out"
-            case "Entertainment":
-                category = "Days Out"
-            case "Groceries":
-                category = "Groceries"
-            case "Transfers":
-                category = "Transfer"
-            case "Transport":
-                category = "Parking" if "park" in desc.lower() else "Transportation"
+        category = detect_category(desc)
+
+        if category is None:
+            match row[category_idx]:
+                case "Eating out":
+                    category = "Dining Out"
+                case "Entertainment":
+                    category = "Days Out"
+                case "Groceries":
+                    category = "Groceries"
+                case "Holidays":
+                    category = "Holiday"
+                case "Transfers":
+                    category = "Transfer"
+                case "Transport":
+                    category = "Parking" if "park" in desc.lower() else "Transportation"
 
         transactions.append(create_transaction(date, -amount, desc, category))
 
