@@ -184,7 +184,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-f", "--file")
-    parser.add_argument("-b", "--bank", choices=["Lloyds", "Monzo", "Bills"])
+    parser.add_argument("-b", "--bank", choices=["Lloyds", "Monzo", "Bills", "Decorating"])
     parser.add_argument("-q", "--quiet", action="store_true")
 
     args = parser.parse_args()
@@ -194,7 +194,7 @@ def main():
     match args.bank:
         case "Lloyds":
             transactions = process_lloyds(csv_lines)
-        case "Natwest 7051" | "Natwest" | "Bills":
+        case "Natwest 7051" | "Natwest" | "Bills" | "Decorating":
             transactions = process_natwest(csv_lines)
         case "Monzo":
             transactions = process_monzo(csv_lines)
