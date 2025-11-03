@@ -1,0 +1,14 @@
+INCOME: list[str] = [
+    "Employment (Net)",
+    "Interest",
+]
+
+CATEGORIES: dict[str, list[str]] = {
+    "Employment (Net)": ["COMPANY"],
+    "Interest": ["INTEREST"],
+    "Groceries": ["Tesco", "Waitrose"],
+}
+
+BILLS_CATEGORIES: dict[str, list[str]] = {
+    "Water": ["WATER"],
+}
